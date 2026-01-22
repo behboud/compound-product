@@ -8,35 +8,46 @@ Based on [Geoffrey Huntley's Ralph pattern](https://ghuntley.com/ralph/) and [Ry
 
 ## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  1. Your System Generates a Report                              │
-│     (analytics, errors, user feedback, etc.)                    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  2. AI Analyzes Report                                          │
-│     Picks #1 actionable priority (no DB migrations)             │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  3. Agent Creates PRD + Tasks                                   │
-│     Breaks work into small, implementable chunks                │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  4. Execution Loop (max N iterations)                           │
-│     Each iteration: pick task → implement → test → commit       │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  5. Create Pull Request                                         │
-│     Human reviews and merges                                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Input
+        R[📊 Daily Report<br/>metrics, errors, feedback]
+    end
+    
+    subgraph "Phase 1: Analysis"
+        A[analyze-report.sh<br/>Anthropic API]
+        R --> A
+        A --> J[analysis.json<br/>priority + criteria]
+    end
+    
+    subgraph "Phase 2: Planning"
+        B[Create Branch<br/>compound/feature-name]
+        J --> B
+        B --> PRD[AI Agent<br/>Load prd skill]
+        PRD --> MD[tasks/prd-feature.md]
+        MD --> TASKS[AI Agent<br/>Load tasks skill]
+        TASKS --> JSON[prd.json<br/>executable tasks]
+    end
+    
+    subgraph "Phase 3: Execution Loop"
+        LOOP[loop.sh<br/>max N iterations]
+        JSON --> LOOP
+        LOOP --> PICK[Pick next task<br/>where passes: false]
+        PICK --> IMPL[AI Agent<br/>Implement task]
+        IMPL --> CHECK{Quality<br/>Checks?}
+        CHECK -->|Pass| COMMIT[Git Commit]
+        CHECK -->|Fail| FIX[Fix & Retry]
+        FIX --> CHECK
+        COMMIT --> UPDATE[Update prd.json<br/>passes: true]
+        UPDATE --> DONE{All tasks<br/>done?}
+        DONE -->|No| PICK
+        DONE -->|Yes| EXIT[Exit loop]
+    end
+    
+    subgraph Output
+        EXIT --> PUSH[Git Push]
+        PUSH --> PR[🎉 Pull Request<br/>Ready for review]
+    end
 ```
 
 ## Quick Start
