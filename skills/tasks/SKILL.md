@@ -51,11 +51,42 @@ Use these patterns for agent-testable criteria:
 |------|---------|---------|
 | Command | "Run `[cmd]` - exits with code 0" | "Run `npm test` - exits with code 0" |
 | File check | "File `[path]` contains `[string]`" | "File `middleware.ts` contains `clerkMiddleware`" |
-| Browser nav | "Navigate to `[url]` - [expected result]" | "Navigate to /login - SignIn component renders" |
-| Browser action | "Click `[element]` - [expected result]" | "Click 'Submit' button - redirects to /dashboard" |
-| Console check | "Browser console shows no errors" | |
+| Browser nav | "agent-browser: open `[url]` - [expected result]" | "agent-browser: open /login - SignIn component renders" |
+| Browser action | "agent-browser: click `[element]` - [expected result]" | "agent-browser: click 'Submit' button - redirects to /dashboard" |
+| Console check | "agent-browser: console shows no errors" | |
 | API check | "GET/POST `[url]` returns `[status]` with `[body]`" | "POST /api/signup returns 200" |
-| Screenshot | "Screenshot shows `[element]` visible at `[location]`" | "Screenshot shows CTA button above fold" |
+| Screenshot | "agent-browser: screenshot shows `[element]` visible" | "agent-browser: screenshot shows CTA button above fold" |
+
+### Browser Testing with agent-browser
+
+All browser-based acceptance criteria MUST use [agent-browser](https://github.com/vercel-labs/agent-browser).
+
+**agent-browser commands:**
+```bash
+agent-browser open <url>              # Navigate to URL
+agent-browser snapshot -i             # Get interactive elements with refs
+agent-browser click @ref              # Click element by ref
+agent-browser fill @ref "value"       # Fill input field
+agent-browser screenshot <path>       # Save screenshot
+agent-browser wait --load networkidle # Wait for page load
+agent-browser console                 # Check console for errors
+```
+
+**Example browser acceptance criteria:**
+```json
+{
+  "acceptanceCriteria": [
+    "agent-browser: open http://localhost:3000/signup - page loads",
+    "agent-browser: snapshot -i - find email input field ref",
+    "agent-browser: fill @email 'test@example.com' - value entered",
+    "agent-browser: fill @password 'TestPass123!' - value entered", 
+    "agent-browser: click @submit - form submits",
+    "agent-browser: wait --load networkidle - page settles",
+    "agent-browser: screenshot tmp/signup-result.png - capture result",
+    "agent-browser: console - no errors logged"
+  ]
+}
+```
 
 ---
 
