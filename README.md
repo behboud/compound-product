@@ -239,6 +239,36 @@ All branches are created with a prefix:
 }
 ```
 
+## ⚠️ Security Considerations
+
+**This tool runs AI agents with elevated permissions.** Understand the risks before using:
+
+### What the agents can do
+
+- **Read and modify any file** in your repository
+- **Execute shell commands** (build, test, git operations)
+- **Make network requests** (API calls, git push)
+- **Create branches and PRs** in your repository
+
+### Safeguards in place
+
+1. **PRs, not direct merges** - All changes go through pull requests for human review
+2. **Quality checks** - Configurable checks run before commits
+3. **Max iterations** - The loop stops after N iterations to prevent runaway execution
+4. **Dry run mode** - Test the analysis phase without making changes
+
+### Recommendations
+
+- **Review PRs carefully** before merging
+- **Run in a separate environment** (VM, container) if concerned about file access
+- **Use API keys with limited scope** where possible
+- **Don't use on production branches** - always target a feature branch
+- **Monitor the first few runs** to understand behavior
+
+### The `--dangerously-allow-all` flag
+
+The scripts use `--dangerously-allow-all` (Amp) and `--dangerously-skip-permissions` (Claude Code) to allow autonomous operation. This means the agent bypasses normal confirmation prompts. This is intentional for automation but means you're trusting the agent to make good decisions.
+
 ## Philosophy
 
 **Compound Product** is based on the idea that each improvement should make future improvements easier:

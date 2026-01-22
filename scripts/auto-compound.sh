@@ -78,8 +78,9 @@ log "Using report: $REPORT_NAME"
 log "Step 2: Analyzing report to pick #1 actionable priority..."
 
 if [ -n "$ANALYZE_COMMAND" ]; then
-  # Use custom analyze command (eval to handle complex commands with pipes/args)
-  ANALYSIS_JSON=$(eval "$ANALYZE_COMMAND \"$LATEST_REPORT\"" 2>/dev/null)
+  # Use custom analyze command
+  # Note: This executes the command from config - ensure your config is trusted
+  ANALYSIS_JSON=$(bash -c "$ANALYZE_COMMAND \"$LATEST_REPORT\"" 2>/dev/null)
 else
   # Use default analyze script
   ANALYSIS_JSON=$("$SCRIPT_DIR/analyze-report.sh" "$LATEST_REPORT" 2>/dev/null)
