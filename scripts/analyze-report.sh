@@ -49,7 +49,8 @@ if [ -z "$PROVIDER" ]; then
   echo "╠══════════════════════════════════════════════════════════════════╣" >&2
   echo "║                                                                  ║" >&2
   echo "║  Option 1: Vercel AI Gateway (recommended)                       ║" >&2
-  echo "║    export AI_GATEWAY_API_KEY=your-key                            ║" >&2
+  echo "║    Run: vercel env pull   (uses VERCEL_OIDC_TOKEN)               ║" >&2
+  echo "║    Or:  export AI_GATEWAY_API_KEY=your-key                       ║" >&2
   echo "║                                                                  ║" >&2
   echo "║  Option 2: Anthropic API (direct)                                ║" >&2
   echo "║    export ANTHROPIC_API_KEY=sk-ant-...                           ║" >&2
