@@ -1,11 +1,26 @@
 #!/bin/bash
 # Compound Product Installer
-# Usage: ./install.sh [target_project_path]
+# Usage: curl -fsSL https://raw.githubusercontent.com/.../install.sh | bash
+#    or: ./install.sh [target_project_path]
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET_DIR="${1:-.}"
+REPO_URL="https://github.com/snarktank/compound-product.git"
+
+# Detect if running via curl pipe (no BASH_SOURCE or it points to stdin)
+if [ -z "${BASH_SOURCE[0]}" ] || [ "${BASH_SOURCE[0]}" = "bash" ] || [ ! -f "${BASH_SOURCE[0]}" ]; then
+  # Running via curl | bash - clone to temp dir
+  TEMP_DIR="$(mktemp -d)"
+  trap "rm -rf '$TEMP_DIR'" EXIT
+  echo "Cloning compound-product..."
+  git clone --quiet "$REPO_URL" "$TEMP_DIR/compound-product"
+  SCRIPT_DIR="$TEMP_DIR/compound-product"
+else
+  # Running locally
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+
+TARGET_DIR="${1:-$(pwd)}"
 
 # Resolve to absolute path
 TARGET_DIR="$(cd "$TARGET_DIR" 2>/dev/null && pwd)" || {
@@ -34,12 +49,11 @@ fi
 
 # Skills installation locations for different agents
 # Agent Skills is an emerging open standard: https://agentskills.io
-declare -A SKILL_DIRS=(
-  ["amp"]="$HOME/.config/amp/skills"
-  ["claude"]="$HOME/.claude/skills"
-  ["codex"]="$HOME/.codex/skills"
-  ["copilot"]="$HOME/.copilot/skills"
-)
+# Note: Using simple variables instead of associative arrays for bash 3.x compatibility (macOS)
+SKILL_DIR_AMP="$HOME/.config/amp/skills"
+SKILL_DIR_CLAUDE="$HOME/.claude/skills"
+SKILL_DIR_CODEX="$HOME/.codex/skills"
+SKILL_DIR_COPILOT="$HOME/.copilot/skills"
 
 install_skills() {
   local name="$1"
@@ -56,25 +70,25 @@ INSTALLED_ANY=false
 
 # Install for Amp CLI
 if command -v amp >/dev/null 2>&1; then
-  install_skills "Amp" "${SKILL_DIRS[amp]}"
+  install_skills "Amp" "$SKILL_DIR_AMP"
   INSTALLED_ANY=true
 fi
 
 # Install for Claude Code
 if command -v claude >/dev/null 2>&1; then
-  install_skills "Claude Code" "${SKILL_DIRS[claude]}"
+  install_skills "Claude Code" "$SKILL_DIR_CLAUDE"
   INSTALLED_ANY=true
 fi
 
 # Install for Codex CLI
 if command -v codex >/dev/null 2>&1; then
-  install_skills "Codex" "${SKILL_DIRS[codex]}"
+  install_skills "Codex" "$SKILL_DIR_CODEX"
   INSTALLED_ANY=true
 fi
 
 # Check for VS Code / Copilot (install to user skills dir)
 if command -v code >/dev/null 2>&1; then
-  install_skills "VS Code Copilot" "${SKILL_DIRS[copilot]}"
+  install_skills "VS Code Copilot" "$SKILL_DIR_COPILOT"
   INSTALLED_ANY=true
 fi
 
