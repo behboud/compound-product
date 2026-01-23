@@ -159,6 +159,27 @@ PRD_PATH="$TASKS_DIR/$PRD_FILENAME"
 [ -f "$PRD_PATH" ] || error "PRD was not created at $PRD_PATH"
 log "PRD created: $PRD_PATH"
 
+# Archive previous run before overwriting prd.json
+PRD_FILE="$OUTPUT_DIR/prd.json"
+PROGRESS_FILE="$OUTPUT_DIR/progress.txt"
+ARCHIVE_DIR="$OUTPUT_DIR/archive"
+
+if [ -f "$PRD_FILE" ]; then
+  OLD_BRANCH=$(jq -r '.branchName // empty' "$PRD_FILE" 2>/dev/null || echo "")
+  
+  if [ -n "$OLD_BRANCH" ] && [ "$OLD_BRANCH" != "$BRANCH_NAME" ]; then
+    DATE=$(date +%Y-%m-%d)
+    FOLDER_NAME=$(echo "$OLD_BRANCH" | sed 's|^[^/]*/||')
+    ARCHIVE_FOLDER="$ARCHIVE_DIR/$DATE-$FOLDER_NAME"
+    
+    log "Archiving previous run: $OLD_BRANCH"
+    mkdir -p "$ARCHIVE_FOLDER"
+    cp "$PRD_FILE" "$ARCHIVE_FOLDER/"
+    [ -f "$PROGRESS_FILE" ] && cp "$PROGRESS_FILE" "$ARCHIVE_FOLDER/"
+    log "Archived to: $ARCHIVE_FOLDER"
+  fi
+fi
+
 # Step 5: Use agent to convert PRD to tasks
 log "Step 5: Converting PRD to prd.json with $TOOL..."
 
