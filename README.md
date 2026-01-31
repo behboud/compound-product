@@ -94,6 +94,7 @@ This creates:
 - `scripts/compound/` - The automation scripts
 - `compound.config.json` - Configuration for your project
 - `reports/` - Directory for your daily reports (you provide these)
+- Skills installed for your chosen agent (Amp, Claude Code, or OpenCode)
 
 ### Configuration
 
@@ -108,6 +109,7 @@ Edit `config.json`:
 ```json
 {
   "tool": "amp",
+  "model": "opencode/minimax-m2.1-free",
   "reportsDir": "./reports",
   "outputDir": "./compound",
   "qualityChecks": ["npm run typecheck", "npm test"],
@@ -117,6 +119,10 @@ Edit `config.json`:
 ```
 
 The `tool` field accepts: `"amp"`, `"claude"`, or `"opencode"`
+
+The `model` field is optional and specifies the model to use:
+- For OpenCode: defaults to `opencode/minimax-m2.1-free`
+- For other tools: ignored
 
 ### Running
 
@@ -155,6 +161,16 @@ Example report structure:
 - Move save button above fold
 - Relax email validation
 ```
+
+### Recently Fixed
+
+Compound Product automatically detects recently completed PRDs and includes them in the analysis. The system:
+
+1. Scans `tasks/prd-*.md` files modified in the last 7 days
+2. Extracts completed items into a "Recently Fixed" section
+3. Injects this into the analysis prompt to avoid duplicating work
+
+This prevents the agent from working on issues that have already been addressed.
 
 ## The Loop
 
