@@ -1,5 +1,6 @@
 {
-  "tool": "amp",
+  "tool": "opencode",
+  "model": "opencode/minimax-m2.1-free",
   "reportsDir": "./reports",
   "outputDir": "./scripts/compound",
   "qualityChecks": ["npm run typecheck", "npm test"],

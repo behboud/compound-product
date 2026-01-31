@@ -10,16 +10,18 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_FILE="$PROJECT_ROOT/compound.config.json"
 
-# Load config
-if [ -f "$CONFIG_FILE" ]; then
-  TOOL=$(jq -r '.tool // "amp"' "$CONFIG_FILE")
-  OUTPUT_DIR="$PROJECT_ROOT/$(jq -r '.outputDir // "./scripts/compound"' "$CONFIG_FILE")"
-  MAX_ITERATIONS=$(jq -r '.maxIterations // 10' "$CONFIG_FILE")
-else
-  TOOL="amp"
-  OUTPUT_DIR="$PROJECT_ROOT/scripts/compound"
-  MAX_ITERATIONS=10
-fi
+  # Load config
+  if [ -f "$CONFIG_FILE" ]; then
+    TOOL=$(jq -r '.tool // "amp"' "$CONFIG_FILE")
+    MODEL=$(jq -r '.model // "opencode/minimax-m2.1-free"' "$CONFIG_FILE")
+    OUTPUT_DIR="$PROJECT_ROOT/$(jq -r '.outputDir // "./scripts/compound"' "$CONFIG_FILE")"
+    MAX_ITERATIONS=$(jq -r '.maxIterations // 10' "$CONFIG_FILE")
+  else
+    TOOL="amp"
+    MODEL="opencode/minimax-m2.1-free"
+    OUTPUT_DIR="$PROJECT_ROOT/scripts/compound"
+    MAX_ITERATIONS=10
+  fi
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -47,12 +49,12 @@ run_tool() {
   case "$TOOL" in
     amp) cat "$SCRIPT_DIR/prompt.md" | amp --dangerously-allow-all 2>&1 ;;
     claude) claude --dangerously-skip-permissions --print < "$SCRIPT_DIR/CLAUDE.md" 2>&1 ;;
-    opencode) cat "$SCRIPT_DIR/prompt.md" | opencode run 2>&1 ;;
+    opencode) opencode run --model "$MODEL" "$(cat "$SCRIPT_DIR/prompt.md")" 2>&1 ;;
     *) echo "Error: Unknown tool '$TOOL'" >&2; exit 1 ;;
   esac
 }
 
-echo "Starting Compound Loop - Tool: $TOOL - Max: $MAX_ITERATIONS"
+echo "Starting Compound Loop - Tool: $TOOL - Model: $MODEL - Max: $MAX_ITERATIONS"
 cd "$PROJECT_ROOT"
 
 for i in $(seq 1 $MAX_ITERATIONS); do
