@@ -16,6 +16,7 @@ Or manually:
 2. Copy skills to the appropriate location:
    - Amp: `~/.config/amp/skills/`
    - Claude Code: `~/.claude/skills/`
+   - OpenCode: `~/.config/opencode/skills/`
 3. Copy `config.example.json` to target project as `compound.config.json`
 4. Have user customize `compound.config.json`
 
@@ -81,7 +82,7 @@ Load the tasks skill. Convert [path/to/prd.md] to prd.json
 
 ### Fields
 
-- `tool`: "amp" or "claude"
+- `tool`: "amp", "claude", or "opencode"
 - `reportsDir`: Where to find report markdown files
 - `outputDir`: Where prd.json and progress.txt live
 - `qualityChecks`: Array of commands to run after each task

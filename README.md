@@ -60,7 +60,10 @@ flowchart TD
 
 ### Prerequisites
 
-- [Amp CLI](https://ampcode.com) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+- AI Coding Agent (one of):
+  - [Amp CLI](https://ampcode.com)
+  - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+  - [OpenCode](https://opencode.ai) (`npm install -g opencode`)
 - [agent-browser](https://github.com/vercel-labs/agent-browser) for browser-based testing (`npm install -g agent-browser`)
 - `jq` installed (`brew install jq` on macOS)
 - `gh` CLI installed and authenticated (`brew install gh`)
@@ -112,6 +115,8 @@ Edit `config.json`:
   "branchPrefix": "compound/"
 }
 ```
+
+The `tool` field accepts: `"amp"`, `"claude"`, or `"opencode"`
 
 ### Running
 
@@ -368,6 +373,12 @@ For Claude Code:
 
 ```bash
 ls ~/.claude/skills/
+```
+
+For OpenCode:
+
+```bash
+ls ~/.config/opencode/skills/
 ```
 
 ## Contributing

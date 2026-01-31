@@ -64,6 +64,7 @@ SKILL_DIR_AMP="$HOME/.config/amp/skills"
 SKILL_DIR_CLAUDE="$HOME/.claude/skills"
 SKILL_DIR_CODEX="$HOME/.codex/skills"
 SKILL_DIR_COPILOT="$HOME/.copilot/skills"
+SKILL_DIR_OPENCODE="$HOME/.config/opencode/skills"
 
 install_skills() {
   local name="$1"
@@ -96,6 +97,12 @@ if command -v codex >/dev/null 2>&1; then
   INSTALLED_ANY=true
 fi
 
+# Install for OpenCode CLI
+if command -v opencode >/dev/null 2>&1; then
+  install_skills "OpenCode" "$SKILL_DIR_OPENCODE"
+  INSTALLED_ANY=true
+fi
+
 # Check for VS Code / Copilot (install to user skills dir)
 if command -v code >/dev/null 2>&1; then
   install_skills "VS Code Copilot" "$SKILL_DIR_COPILOT"
@@ -112,6 +119,7 @@ if [ "$INSTALLED_ANY" = false ]; then
   echo "  Amp CLI:        cp -r skills/* ~/.config/amp/skills/"
   echo "  Claude Code:    cp -r skills/* ~/.claude/skills/"
   echo "  Codex CLI:      cp -r skills/* ~/.codex/skills/"
+  echo "  OpenCode:       cp -r skills/* ~/.config/opencode/skills/"
   echo "  VS Code/Copilot: cp -r skills/* ~/.copilot/skills/"
   echo "  Cursor:         cp -r skills/* .cursor/rules/  (project-level)"
   echo ""

@@ -1,14 +1,9 @@
 #!/bin/bash
 # Analyze a report and pick #1 actionable priority
-# Supports multiple LLM providers: Anthropic, OpenRouter, AI Gateway
+# Uses the AI client configured in compound.config.json
 #
 # Usage: ./analyze-report.sh <report-path>
 # Output: JSON to stdout
-#
-# Environment variables (uses first one found):
-#   ANTHROPIC_API_KEY     - Anthropic API directly
-#   OPENROUTER_API_KEY    - OpenRouter (uses claude-sonnet-4-20250514)
-#   AI_GATEWAY_URL        - Any OpenAI-compatible endpoint (requires AI_GATEWAY_API_KEY)
 
 set -e
 
@@ -24,47 +19,43 @@ if [ ! -f "$REPORT_PATH" ]; then
   exit 1
 fi
 
-# Detect which provider is available (Vercel AI Gateway preferred)
-PROVIDER=""
-if [ -n "$VERCEL_OIDC_TOKEN" ]; then
-  # Vercel AI Gateway with OIDC auth (from `vercel env pull`)
-  PROVIDER="gateway"
-  AI_GATEWAY_URL="${AI_GATEWAY_URL:-https://ai-gateway.vercel.sh/v1}"
-  AI_GATEWAY_AUTH_TOKEN="$VERCEL_OIDC_TOKEN"
-elif [ -n "$AI_GATEWAY_API_KEY" ]; then
-  # Vercel AI Gateway with API key
-  PROVIDER="gateway"
-  AI_GATEWAY_URL="${AI_GATEWAY_URL:-https://ai-gateway.vercel.sh/v1}"
-  AI_GATEWAY_AUTH_TOKEN="$AI_GATEWAY_API_KEY"
-elif [ -n "$ANTHROPIC_API_KEY" ]; then
-  PROVIDER="anthropic"
-elif [ -n "$OPENAI_API_KEY" ]; then
-  PROVIDER="openai"
-elif [ -n "$OPENROUTER_API_KEY" ]; then
-  PROVIDER="openrouter"
+# Find project root and config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CONFIG_FILE="$PROJECT_ROOT/compound.config.json"
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: compound.config.json not found at $CONFIG_FILE" >&2
+  exit 1
 fi
 
-if [ -z "$PROVIDER" ]; then
-  echo "" >&2
-  echo "╔══════════════════════════════════════════════════════════════════╗" >&2
-  echo "║  No LLM provider configured. Set one of these environment vars: ║" >&2
-  echo "╠══════════════════════════════════════════════════════════════════╣" >&2
-  echo "║                                                                  ║" >&2
-  echo "║  Option 1: Vercel AI Gateway (recommended)                       ║" >&2
-  echo "║    Run: vercel env pull   (uses VERCEL_OIDC_TOKEN)               ║" >&2
-  echo "║    Or:  export AI_GATEWAY_API_KEY=your-key                       ║" >&2
-  echo "║                                                                  ║" >&2
-  echo "║  Option 2: Anthropic API (direct)                                ║" >&2
-  echo "║    export ANTHROPIC_API_KEY=sk-ant-...                           ║" >&2
-  echo "║                                                                  ║" >&2
-  echo "║  Option 3: OpenAI API (direct)                                   ║" >&2
-  echo "║    export OPENAI_API_KEY=sk-...                                  ║" >&2
-  echo "║                                                                  ║" >&2
-  echo "║  Option 4: OpenRouter                                            ║" >&2
-  echo "║    export OPENROUTER_API_KEY=sk-or-...                           ║" >&2
-  echo "║                                                                  ║" >&2
-  echo "╚══════════════════════════════════════════════════════════════════╝" >&2
-  echo "" >&2
+# Read configured tool from config
+TOOL=$(jq -r '.tool // "amp"' "$CONFIG_FILE")
+
+# Map tool to command
+get_tool_command() {
+  case "$1" in
+    amp)
+      echo "amp"
+      ;;
+    claude|claude-code)
+      echo "claude"
+      ;;
+    opencode)
+      echo "opencode"
+      ;;
+    *)
+      echo "amp"
+      ;;
+  esac
+}
+
+TOOL_CMD=$(get_tool_command "$TOOL")
+
+# Check if tool is available
+if ! command -v "$TOOL_CMD" &> /dev/null; then
+  echo "Error: Configured tool '$TOOL' (command: $TOOL_CMD) is not installed or not in PATH" >&2
+  echo "Please install $TOOL or update compound.config.json" >&2
   exit 1
 fi
 
@@ -119,64 +110,33 @@ Respond with ONLY a JSON object (no markdown, no code fences, no explanation):
   \"branch_name\": \"compound/kebab-case-feature-name\"
 }"
 
-PROMPT_ESCAPED=$(echo "$PROMPT" | jq -Rs .)
+# Use the configured tool to analyze the report
+# Create a temp file for the prompt
+PROMPT_FILE=$(mktemp)
+echo "$PROMPT" > "$PROMPT_FILE"
 
-# Make the API call based on provider
-case "$PROVIDER" in
-  anthropic)
-    RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
-      -H "Content-Type: application/json" \
-      -H "x-api-key: $ANTHROPIC_API_KEY" \
-      -H "anthropic-version: 2023-06-01" \
-      -d "{
-        \"model\": \"claude-opus-4-5-20251101\",
-        \"max_tokens\": 1024,
-        \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
-      }")
-    TEXT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
+# Call the tool with the prompt
+case "$TOOL_CMD" in
+  amp)
+    TEXT=$($TOOL_CMD --no-tty -p "$PROMPT_FILE" 2>/dev/null || true)
     ;;
-    
-  openai)
-    RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $OPENAI_API_KEY" \
-      -d "{
-        \"model\": \"gpt-5.2\",
-        \"max_completion_tokens\": 1024,
-        \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
-      }")
-    TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+  claude)
+    TEXT=$($TOOL_CMD -p "$PROMPT" 2>/dev/null || true)
     ;;
-    
-  openrouter)
-    RESPONSE=$(curl -s https://openrouter.ai/api/v1/chat/completions \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $OPENROUTER_API_KEY" \
-      -d "{
-        \"model\": \"anthropic/claude-opus-4.5\",
-        \"max_tokens\": 1024,
-        \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
-      }")
-    TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+  opencode)
+    TEXT=$($TOOL_CMD run --no-interactive -p "$PROMPT" 2>/dev/null || true)
     ;;
-    
-  gateway)
-    MODEL="${AI_GATEWAY_MODEL:-anthropic/claude-opus-4.5}"
-    RESPONSE=$(curl -s "${AI_GATEWAY_URL}/chat/completions" \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $AI_GATEWAY_AUTH_TOKEN" \
-      -d "{
-        \"model\": \"$MODEL\",
-        \"max_tokens\": 1024,
-        \"messages\": [{\"role\": \"user\", \"content\": $PROMPT_ESCAPED}]
-      }")
-    TEXT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+  *)
+    echo "Error: Unknown tool command: $TOOL_CMD" >&2
+    rm "$PROMPT_FILE"
+    exit 1
     ;;
 esac
 
+rm "$PROMPT_FILE"
+
 if [ -z "$TEXT" ]; then
-  echo "Error: Failed to get response from $PROVIDER" >&2
-  echo "Response: $RESPONSE" >&2
+  echo "Error: Failed to get response from $TOOL" >&2
   exit 1
 fi
 
